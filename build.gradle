@@ -1,0 +1,59 @@
+import org.apache.tools.ant.filters.ReplaceTokens
+
+plugins {
+    id "java"
+}
+
+group = "me.axd1x8a"
+version = project.property("version")
+
+repositories {
+    mavenCentral()
+    maven {
+        name = "papermc-repo"
+        url = "https://repo.papermc.io/repository/maven-public/"
+    }
+        maven {
+        name = "sonatype"
+        url = "https://oss.sonatype.org/content/groups/public/"
+    }
+}
+
+dependencies {
+    compileOnly "com.github.pengrad:java-telegram-bot-api:6.9.0"
+    implementation 'com.github.pengrad:java-telegram-bot-api:6.9.0'
+    compileOnly "com.velocitypowered:velocity-api:3.2.0-SNAPSHOT"
+    annotationProcessor "com.velocitypowered:velocity-api:3.2.0-SNAPSHOT"
+}
+
+sourceSets {
+    main {
+        resources {
+            srcDirs = ["src/main/resources"]
+        }
+
+        java {
+            exclude "me/axd1x8a/velocitytelegrambridge/VelocityTelegramBridge.java"
+        }
+
+    }
+}
+
+task generateSources(type: Copy) {
+    from "src/main/java/me/axd1x8a/velocitytelegrambridge/VelocityTelegramBridge.java"
+    into "$buildDir/generated-src"
+
+    filter(ReplaceTokens,  tokens:[version: project.property("version")])
+    println "Generating sources..."
+    println "Version: ${project.property("version")}"
+}
+
+compileJava.source "$buildDir/generated-src"
+compileJava.dependsOn generateSources
+
+task fatJar(type: Jar) {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    archiveBaseName = "${rootProject.name}"
+    from { configurations.compileClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+    with jar
+}

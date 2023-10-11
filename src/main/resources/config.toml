@@ -1,0 +1,27 @@
+[Telegram]
+token = "123456789:ABCDEF"
+chat_id = 123456789
+
+[Events]
+# Format keys:
+# {player} - The author of the event
+# {message} - The message of the event (for message events)
+# {server} - The server the event was sent from
+# {event} - The event that was sent (achievement, death, etc.)
+
+message_format = "[{player}]: {message}"
+message_enabled = true
+
+message_from_telegram_format = "TG[{author}]: {message}"
+message_from_telegram_enabled = true
+
+join_format = "{player} joined the server"
+join_enabled = true
+
+leave_format = "{player} left the server"
+leave_enabled = true
+
+server_change_format = "{player} moved from {server} to {new_server}"
+server_change_enabled = true
+
+server_event_format = "[{server}] {event}"
