@@ -1,7 +1,8 @@
 import org.apache.tools.ant.filters.ReplaceTokens
 
 plugins {
-    id "java"
+    id 'java'
+    id 'com.github.johnrengelman.shadow' version '7.1.0'
 }
 
 group = "me.axd1x8a"
@@ -20,8 +21,7 @@ repositories {
 }
 
 dependencies {
-    compileOnly "com.github.pengrad:java-telegram-bot-api:6.9.0"
-    implementation 'com.github.pengrad:java-telegram-bot-api:6.9.0'
+    implementation "com.github.pengrad:java-telegram-bot-api:6.9.1"
     compileOnly "com.velocitypowered:velocity-api:3.2.0-SNAPSHOT"
     annotationProcessor "com.velocitypowered:velocity-api:3.2.0-SNAPSHOT"
 }
@@ -51,9 +51,8 @@ task generateSources(type: Copy) {
 compileJava.source "$buildDir/generated-src"
 compileJava.dependsOn generateSources
 
-task fatJar(type: Jar) {
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    archiveBaseName = "${rootProject.name}"
-    from { configurations.compileClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
-    with jar
+shadowJar {
+    archiveBaseName.set("${rootProject.name}")
+    archiveVersion.set("${project.property("version")}")
+    archiveClassifier.set('')
 }
