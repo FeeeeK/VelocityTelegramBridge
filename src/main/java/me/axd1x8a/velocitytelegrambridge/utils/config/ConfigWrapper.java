@@ -1,155 +1,90 @@
 package me.axd1x8a.velocitytelegrambridge.utils.config;
 
-import java.io.File;
-import java.io.InputStream;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Objects;
 
-import com.moandjiezana.toml.Toml;
+import org.slf4j.Logger;
 
-public final class ConfigWrapper {
-    private Toml config;
-    private File configFile;
+import com.electronwill.nightconfig.core.file.CommentedFileConfig;
+import com.electronwill.nightconfig.core.serde.ObjectDeserializer;
+import com.electronwill.nightconfig.core.serde.ObjectSerializer;
 
-    private String token;
-    private long chatId;
+public class ConfigWrapper {
+    private final Logger logger;
+    private CommentedFileConfig config;
 
-    private String messageFormat;
-    private String joinFormat;
-    private String leaveFormat;
-    private String serverChangeFormat;
-    private String messageFromTGFormat;
+    private Path dataDirectory;
+    private BaseConfigObject configObject = new BaseConfigObject();
+    private BaseConfigObject defaultConfigObject = new BaseConfigObject();
+    private ObjectSerializer objectSerializer = ObjectSerializer.standard();
+    private ObjectDeserializer objectDeserializer = ObjectDeserializer.standard();
 
-    private boolean messageEnabled;
-    private boolean joinEnabled;
-    private boolean leaveEnabled;
-    private boolean serverChangeEnabled;
-    private boolean messageFromTGEnabled;
-
-    ConfigWrapper(Toml config) {
-        this.config = config;
-
-        token = config.getString("Telegram.token", "");
-        chatId = config.getLong("Telegram.chat_id", 0L);
-
-        messageFormat = config.getString("Events.message_format", "");
-        joinFormat = config.getString("Events.join_format", "");
-        leaveFormat = config.getString("Events.leave_format", "");
-        serverChangeFormat = config.getString("Events.server_change_format", "");
-
-        messageEnabled = config.getBoolean("Events.message_enabled", true);
-        joinEnabled = config.getBoolean("Events.join_enabled", true);
-        leaveEnabled = config.getBoolean("Events.leave_enabled", true);
-        serverChangeEnabled = config.getBoolean("Events.server_change_enabled", true);
-
-        messageFromTGFormat = config.getString("Events.message_from_telegram_format", "");
-        messageFromTGEnabled = config.getBoolean("Events.message_from_telegram_enabled", true);
-
+    public ConfigWrapper(Logger logger, Path dataDirectory) {
+        this.logger = logger;
+        this.dataDirectory = dataDirectory;
+        this.config = CommentedFileConfig
+                .builder(dataDirectory.resolve("config.toml"))
+                .sync()
+                .onFileNotFound(null)
+                .preserveInsertionOrder()
+                .build();
+        this.objectSerializer.serializeFields(defaultConfigObject, config);
     }
 
-    public static ConfigWrapper load(Path dataDirectory) {
-        Path configFolderPath = createConfigFolder(dataDirectory);
-        Path configPath =  createConfig(configFolderPath);
-        if (configPath != null) {
-            File configFile = configPath.toFile();
-            Toml config = new Toml().read(configFile);
-            return new ConfigWrapper(config);
-        }
-        return null;
+    public CommentedFileConfig getConfig() {
+        return config;
     }
 
-    private static Path createConfig(Path dataDirectory) {
-        try {
-            Path file = dataDirectory.resolve("config.toml");
-            if (Files.notExists(file)) {
-                try (InputStream stream = ConfigWrapper.class.getResourceAsStream("/config.toml")) {
-                    Files.copy(Objects.requireNonNull(stream), file);
-                }
-            }
-            return file;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
+    public BaseConfigObject getConfigObject() {
+        return configObject;
     }
 
-    private static Path createConfigFolder(Path dataDirectory) {
-        try {
-            if (Files.notExists(dataDirectory)) {
-                Files.createDirectory(dataDirectory);
-            }
-            return dataDirectory;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
-    }
-
-    void reload() {
-        config = config.read(configFile);
-        this.token = config.getString("Telegram.token", "");
-        this.chatId = config.getLong("Telegram.chat_id", 0L);
-
-        this.messageFormat = config.getString("Events.message_format", "");
-        this.joinFormat = config.getString("Events.join_format", "");
-        this.leaveFormat = config.getString("Events.leave_format", "");
-        this.serverChangeFormat = config.getString("Events.server_change_format", "");
-
-        this.messageEnabled = config.getBoolean("Events.message_enabled", true);
-        this.joinEnabled = config.getBoolean("Events.join_enabled", true);
-        this.leaveEnabled = config.getBoolean("Events.leave_enabled", true);
-        this.serverChangeEnabled = config.getBoolean("Events.server_change_enabled", true);
-
-        this.messageFromTGFormat = config.getString("Events.message_from_telegram_format", "");
-        this.messageFromTGEnabled = config.getBoolean("Events.message_from_telegram_enabled", true);
+    public BaseConfigObject.EventConfigObject getEvents() {
+        return configObject.Events;
     }
 
     public String getToken() {
-        return this.token;
+        return configObject.Telegram.token;
     }
 
-    public long getChatId() {
-        return this.chatId;
+    public Long getChatId() {
+        return configObject.Telegram.chat_id;
     }
 
-    public String getMessageFormat() {
-        return this.messageFormat;
+    private void tryCreateDataDir() {
+        if (!dataDirectory.toFile().exists()) {
+            logger.info("Data directory does not exist, creating..., {}", dataDirectory.toString());
+
+            if (!dataDirectory.toFile().mkdir()) {
+                throw new IllegalStateException("Failed to create data directory");
+            }
+        }
     }
 
-    public String getJoinFormat() {
-        return this.joinFormat;
+    public void load() {
+        tryCreateDataDir();
+        if (!config.getNioPath().toFile().exists()) {
+            config.save();
+            return;
+        }
+        config.load();
+        objectDeserializer.deserializeFields(config, configObject);
     }
 
-    public String getLeaveFormat() {
-        return this.leaveFormat;
+    public void save() {
+        tryCreateDataDir();
+        config.save();
     }
 
-    public String getServerChangeFormat() {
-        return this.serverChangeFormat;
+    public void reload() {
+        load();
     }
 
-    public String getMessageFromTGFormat() {
-        return this.messageFromTGFormat;
+    public void unload() {
+        config.close();
     }
 
-    public boolean isMessageEnabled() {
-        return this.messageEnabled;
-    }
-
-    public boolean isJoinEnabled() {
-        return this.joinEnabled;
-    }
-
-    public boolean isLeaveEnabled() {
-        return this.leaveEnabled;
-    }
-
-    public boolean isServerChangeEnabled() {
-        return this.serverChangeEnabled;
-    }
-
-    public boolean isMessageFromTGEnabled() {
-        return this.messageFromTGEnabled;
+    public void reset() {
+        config.getFile().delete();
+        load();
     }
 }
