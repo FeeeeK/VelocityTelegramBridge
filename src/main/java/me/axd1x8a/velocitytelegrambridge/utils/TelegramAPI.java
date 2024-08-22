@@ -16,7 +16,7 @@ import com.pengrad.telegrambot.ExceptionHandler;
 import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.TelegramException;
 import com.pengrad.telegrambot.UpdatesListener;
-import com.pengrad.telegrambot.model.Chat;
+import com.pengrad.telegrambot.model.ChatFullInfo;
 import com.pengrad.telegrambot.model.Message;
 import com.pengrad.telegrambot.model.Update;
 import com.pengrad.telegrambot.model.request.ParseMode;
@@ -119,7 +119,7 @@ public class TelegramAPI {
 
     public void updatePinnedMessage(String message) {
         GetChatResponse chatResponse = execute(new GetChat(chatId));
-        Chat chat = chatResponse.chat();
+        ChatFullInfo chat = chatResponse.chat();
         Message pinnedMessage = chat.pinnedMessage();
 
         if (pinnedMessage != null) {
