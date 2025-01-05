@@ -41,9 +41,7 @@ public class VelocityTelegramBridge {
         this.server = server;
         this.logger = logger;
         this.dataDirectory = dataDirectory;
-        this.version = server.getPluginManager().getPlugin("velocity-telegram-bridge").get()
-                .getDescription()
-                .getVersion().get();
+        this.version = "@version@";
     }
 
     @Subscribe
@@ -62,8 +60,15 @@ public class VelocityTelegramBridge {
 
     private void registerEvents() {
         server.getEventManager().register(this, new ProxyEvents(logger, config, telegram));
-        if (server.getPluginManager().isLoaded("yeplib")) {
-            server.getEventManager().register(this, new BackendServerEvents(logger, config, telegram));
+        if (this.config.getEvents().death_enabled || this.config.getEvents().advancement_enabled) {
+            boolean yeplibPresent = server.getPluginManager().isLoaded("yeplib");
+            if (yeplibPresent) {
+                server.getEventManager().register(this, new BackendServerEvents(logger, config, telegram));
+            } else {
+                logger.warn(
+                        "Yeplib is not present, but death or advancement events are enabled."
+                                + " Please refer to the plugin's documentation for more information.");
+            }
         }
         TelegramEvents telegramEvents = new TelegramEvents(config, server);
         telegram.registerUpdatesListener(
