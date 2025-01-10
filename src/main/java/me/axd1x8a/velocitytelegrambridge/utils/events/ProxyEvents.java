@@ -39,7 +39,7 @@ public class ProxyEvents {
     @Subscribe(order = PostOrder.LATE)
     private void onDisconnect(DisconnectEvent event) {
         logger.debug("Handling DisconnectEvent");
-        if (!config.getEvents().leave_enabled) {
+        if (!config.getEvents().leave_enabled || !config.getEvents().status_enabled) {
             return;
         }
         Player player = event.getPlayer();
@@ -47,26 +47,26 @@ public class ProxyEvents {
         if (!server.isPresent()) {
             return;
         }
+        String serverName = server.get().getServerInfo().getName();
+        String playerName = player.getUsername();
+        telegram.sendMessage(StringFormatter.format(
+                config.getEvents().leave_format,
+                Map.of(
+                        "player", playerName,
+                        "server", serverName)));
         if (config.getEvents().status_enabled) {
-            handleJoinLeaveStatus(
-                    player,
-                    server.get().getServerInfo().getName(),
-                    player.getUsername(),
-                    false);
-        } else {
-            String serverName = server.get().getServerInfo().getName();
-            String playerName = player.getUsername();
-            telegram.sendMessage(StringFormatter.format(
-                    config.getEvents().leave_format,
-                    Map.of(
-                            "player", playerName,
-                            "server", serverName)));
+            handleJoinLeaveStatus(player, serverName, playerName, false);
         }
     }
 
     @Subscribe(order = PostOrder.LATE)
     private void onConnect(ServerPostConnectEvent event) {
         logger.debug("Handling ServerPostConnectEvent");
+        if (!config.getEvents().join_enabled
+                && !config.getEvents().server_change_enabled
+                && !config.getEvents().status_enabled) {
+            return;
+        }
         RegisteredServer previousServer = event.getPreviousServer();
         Player player = event.getPlayer();
         Optional<ServerConnection> server = player.getCurrentServer();
@@ -75,16 +75,19 @@ public class ProxyEvents {
             return;
         }
 
-        if (config.getEvents().status_enabled) {
-            handleJoinLeaveStatus(
-                    player,
-                    server.get().getServerInfo().getName(),
-                    player.getUsername(), true);
-        } else if (previousServer == null) {
+        if (previousServer == null) {
             handleFirstJoin(event, player, server.get());
-        } else {
-            handleServerChange(event, player, server.get());
+
+            if (config.getEvents().status_enabled) {
+                handleJoinLeaveStatus(
+                        player,
+                        server.get().getServerInfo().getName(),
+                        player.getUsername(), true);
+            }
+            return;
         }
+
+        handleServerChange(event, player, server.get());
     }
 
     private void handleFirstJoin(ServerPostConnectEvent event, Player player, ServerConnection server) {

@@ -19,7 +19,7 @@ public class TelegramEvents {
     }
 
     public void onMessage(Update update) {
-        if (!config.getEvents().join_enabled) {
+        if (!config.getEvents().message_from_telegram_enabled) {
             return;
         }
         String message = update.message().text();
