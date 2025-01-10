@@ -44,7 +44,8 @@ task generateSources(type: Copy) {
     from "src/main/java/me/axd1x8a/velocitytelegrambridge/VelocityTelegramBridge.java"
     into "$buildDir/generated-src"
 
-    filter(ReplaceTokens,  tokens:[version: project.version])
+    filter(ReplaceTokens, tokens: [version: project.version])
+    inputs.property("version", project.version)
     println "Generating sources..."
     println "Version: ${project.version}"
 }
